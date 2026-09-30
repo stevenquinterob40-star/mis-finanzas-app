@@ -31,7 +31,7 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
-@Database(entities = [Transaction::class], version = 2, exportSchema = false)
+@Database(entities = [Transaction::class], version = 3, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun transactionDao(): TransactionDao
@@ -48,6 +48,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "mis_finanzas_db"
                 )
                     .addMigrations(MIGRATION_1_2)
+                    .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
                 instance

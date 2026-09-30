@@ -68,7 +68,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Necesario antes de usar PdfBox para que cargue sus recursos internos.
         com.tom_roush.pdfbox.android.PDFBoxResourceLoader.init(applicationContext)
 
         setContent {
@@ -96,14 +95,14 @@ class MainActivity : ComponentActivity() {
                 val transacciones by viewModel.transacciones.collectAsState()
                 val pendientes by viewModel.pendientesRevision.collectAsState()
                 val automaticas by viewModel.automaticas.collectAsState()
-                val balanceDigital by viewModel.balanceDigital.collectAsState()
+                
+                val balanceNequi by viewModel.balanceNequi.collectAsState()
+                val balanceBancolombia by viewModel.balanceBancolombia.collectAsState()
+                val balanceNu by viewModel.balanceNu.collectAsState()
                 val balanceEfectivo by viewModel.balanceEfectivo.collectAsState()
+                
                 val comparacion by viewModel.comparacion.collectAsState()
 
-                // Procesa uno o varios archivos (PDF y/o CSV mezclados). Si algún PDF
-                // necesita contraseña, se pide UNA sola vez y se reintenta con ella en
-                // TODOS los archivos del lote (pensado para varios extractos del mismo
-                // depósito, que comparten la misma contraseña).
                 fun procesarArchivos(uris: List<Uri>, password: String?) {
                     val movimientos = mutableListOf<com.martin.misfinanzas.data.MovimientoExtracto>()
                     var necesitaPassword = false
@@ -207,7 +206,9 @@ class MainActivity : ComponentActivity() {
                     } else {
                         when (pantalla) {
                             Pantalla.INICIO -> HomeScreen(
-                                balanceDigital = balanceDigital,
+                                balanceNequi = balanceNequi,
+                                balanceBancolombia = balanceBancolombia,
+                                balanceNu = balanceNu,
                                 balanceEfectivo = balanceEfectivo,
                                 transaccionesRecientes = transacciones,
                                 accesoNotificacionesActivo = notiActivo,
@@ -236,8 +237,6 @@ class MainActivity : ComponentActivity() {
                                 },
                                 modifier = modifier
                             )
-                            // Nota: HistorialScreen puede seguir mostrando "Importar extracto (PDF o CSV)";
-                            // ahora el selector permite elegir varios archivos a la vez.
                             Pantalla.PENDIENTES -> PendientesScreen(
                                 pendientes = pendientes,
                                 automaticas = automaticas,

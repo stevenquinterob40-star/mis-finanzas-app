@@ -235,6 +235,9 @@ class MainActivity : ComponentActivity() {
                                         )
                                     )
                                 },
+                                onLimpiarDuplicados = {
+                                    viewModel.limpiarDuplicadosExactos()
+                                },
                                 modifier = modifier
                             )
                             Pantalla.PENDIENTES -> PendientesScreen(

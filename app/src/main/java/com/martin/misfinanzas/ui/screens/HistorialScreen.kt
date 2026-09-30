@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material3.Card
@@ -51,6 +52,7 @@ fun HistorialScreen(
     transacciones: List<Transaction>,
     onClickTransaction: (Transaction) -> Unit,
     onImportarExtracto: () -> Unit = {},
+    onLimpiarDuplicados: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -113,9 +115,15 @@ fun HistorialScreen(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         item {
-            OutlinedButton(onClick = onImportarExtracto, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Filled.UploadFile, contentDescription = null, modifier = Modifier.padding(end = 6.dp))
-                Text("Importar extracto (PDF o CSV)")
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onImportarExtracto, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Filled.UploadFile, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
+                    Text("Importar")
+                }
+                OutlinedButton(onClick = onLimpiarDuplicados, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
+                    Text("Limpiar rep.")
+                }
             }
         }
 

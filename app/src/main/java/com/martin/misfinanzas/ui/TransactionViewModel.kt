@@ -15,8 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.ZoneId
+import java.util.Calendar
 
 data class ComparacionExtracto(
     val coinciden: Int,
@@ -27,8 +26,12 @@ data class ComparacionExtracto(
 
 private fun montosCercanos(a: Double, b: Double): Boolean = kotlin.math.abs(a - b) < 1.0
 
-private fun diasCercanos(millisA: Long, millisB: Long): Boolean =
-    kotlin.math.abs(millisA - millisB) <= 36 * 60 * 60 * 1000L
+private fun mismoDia(millisA: Long, millisB: Long): Boolean {
+    val calA = Calendar.getInstance().apply { timeInMillis = millisA }
+    val calB = Calendar.getInstance().apply { timeInMillis = millisB }
+    return calA.get(Calendar.YEAR) == calB.get(Calendar.YEAR) &&
+        calA.get(Calendar.DAY_OF_YEAR) == calB.get(Calendar.DAY_OF_YEAR)
+}
 
 class TransactionViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -96,7 +99,7 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
                     t.id !in idsEmparejados &&
                         t.tipo == mov.tipo &&
                         montosCercanos(t.monto, mov.monto) &&
-                        diasCercanos(t.fecha, mov.fecha)
+                        mismoDia(t.fecha, mov.fecha)
                 }
                 if (match != null) {
                     idsEmparejados.add(match.id)
@@ -105,49 +108,17 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
                 }
             }
 
-            val fechaMin = movimientos.minOfOrNull { it.fecha }
-            val fechaMax = movimientos.maxOfOrNull { it.fecha }
-            val margenUnDia = 86_400_000L
-
-            val candidatosSobran = if (fechaMin != null && fechaMax != null) {
-                existentesDigital.filter { t ->
-                    t.id !in idsEmparejados && t.fecha in (fechaMin - margenUnDia)..(fechaMax + margenUnDia)
-                }
-            } else {
-                emptyList()
-            }
-
-            val autoLimpiables = candidatosSobran.filter { t ->
-                t.esAutomatica && existentesDigital.any { emparejada ->
-                    emparejada.id in idsEmparejados &&
-                        emparejada.tipo == t.tipo &&
-                        montosCercanos(emparejada.monto, t.monto) &&
-                        diasCercanos(emparejada.fecha, t.fecha)
-                }
-            }
-            val sobranReales = candidatosSobran - autoLimpiables.toSet()
-
-            for (duplicado in autoLimpiables) {
-                repository.delete(duplicado)
-            }
-
             _comparacion.value = ComparacionExtracto(
                 coinciden = idsEmparejados.size,
                 faltan = faltan,
-                sobran = sobranReales,
-                limpiadosAutomaticamente = autoLimpiables.size
+                sobran = emptyList(),
+                limpiadosAutomaticamente = 0
             )
         }
     }
 
     fun eliminarSobrante(transaction: Transaction) {
-        viewModelScope.launch {
-            repository.delete(transaction)
-            val actual = _comparacion.value
-            if (actual != null) {
-                _comparacion.value = actual.copy(sobran = actual.sobran.filter { it.id != transaction.id })
-            }
-        }
+        viewModelScope.launch { repository.delete(transaction) }
     }
 
     fun agregarFaltantes(faltan: List<MovimientoExtracto>) {
@@ -184,13 +155,8 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
                     )
                 }
             }
-            val actual = _comparacion.value
-            if (actual != null) {
-                _comparacion.value = actual.copy(
-                    coinciden = actual.coinciden + faltan.size,
-                    faltan = actual.faltan.filter { it !in faltan }
-                )
-            }
+            limpiarDuplicadosExactos()
+            _comparacion.value = null
         }
     }
 
@@ -201,7 +167,11 @@ class TransactionViewModel(application: Application) : AndroidViewModel(applicat
             val duplicadas = mutableListOf<Transaction>()
 
             for (t in todas) {
-                val firma = "${t.monto}_${t.descripcion}_${t.fecha}_${t.tipo}_${t.origen}_${t.entidad}"
+                // Firma inteligente basada en valor, descripción y el mismo día calendario
+                val cal = Calendar.getInstance().apply { timeInMillis = t.fecha }
+                val fechaKey = "${cal.get(Calendar.YEAR)}_${cal.get(Calendar.DAY_OF_YEAR)}"
+                val firma = "${t.monto}_${t.descripcion.trim().lowercase()}_${fechaKey}_${t.tipo}_${t.entidad}"
+                
                 if (unicas.contains(firma)) {
                     duplicadas.add(t)
                 } else {

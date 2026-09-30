@@ -12,18 +12,22 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -75,10 +79,26 @@ fun DashboardScreen(
     modifier: Modifier = Modifier
 ) {
     var periodo by remember { mutableStateOf(Periodo.MES) }
+    var textoBusqueda by remember { mutableStateOf("") }
+    var filtroTipoResumen by remember { mutableStateOf<TipoMovimiento?>(null) }
     var filtroDetalle by remember { mutableStateOf<FiltroDetalle?>(null) }
 
     val inicioMillis = remember(periodo) { inicioDePeriodo(periodo) }
-    val filtradas = transacciones.filter { it.fecha >= inicioMillis && !it.necesitaRevision }
+    
+    val filtradas = transacciones
+        .filter { it.fecha >= inicioMillis && !it.necesitaRevision }
+        .filter { t ->
+            val busqueda = textoBusqueda.trim().lowercase()
+            if (busqueda.isBlank()) true
+            else {
+                val porNombre = t.descripcion.lowercase().contains(busqueda)
+                val porMonto = t.monto.toString().contains(busqueda) || t.monto.comoPesos().lowercase().contains(busqueda)
+                val porTipo = t.tipo.name.lowercase().contains(busqueda) || (if (t.tipo == TipoMovimiento.INGRESO) "ingreso" else "gasto").contains(busqueda)
+                val porEntidad = t.entidad.lowercase().contains(busqueda)
+                porNombre || porMonto || porTipo || porEntidad
+            }
+        }
+        .filter { t -> filtroTipoResumen == null || t.tipo == filtroTipoResumen }
 
     val filtroActual = filtroDetalle
     if (filtroActual != null) {
@@ -136,6 +156,50 @@ fun DashboardScreen(
         }
 
         item {
+            OutlinedTextField(
+                value = textoBusqueda,
+                onValueChange = { textoBusqueda = it },
+                label = { Text("Buscar en resumen por nombre, valor, tipo...") },
+                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Buscar") },
+                trailingIcon = {
+                    if (textoBusqueda.isNotEmpty()) {
+                        IconButton(onClick = { textoBusqueda = "" }) {
+                            Icon(Icons.Filled.Close, contentDescription = "Limpiar búsqueda")
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+        }
+
+        item {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                item {
+                    FilterChip(
+                        selected = filtroTipoResumen == null,
+                        onClick = { filtroTipoResumen = null },
+                        label = { Text("Todos los tipos") }
+                    )
+                }
+                item {
+                    FilterChip(
+                        selected = filtroTipoResumen == TipoMovimiento.INGRESO,
+                        onClick = { filtroTipoResumen = if (filtroTipoResumen == TipoMovimiento.INGRESO) null else TipoMovimiento.INGRESO },
+                        label = { Text("Ver solo Ingresos") }
+                    )
+                }
+                item {
+                    FilterChip(
+                        selected = filtroTipoResumen == TipoMovimiento.GASTO,
+                        onClick = { filtroTipoResumen = if (filtroTipoResumen == TipoMovimiento.GASTO) null else TipoMovimiento.GASTO },
+                        label = { Text("Ver solo Gastos") }
+                    )
+                }
+            }
+        }
+
+        item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -177,7 +241,7 @@ fun DashboardScreen(
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "Movimientos bancarios (Nequi) · ${periodo.etiqueta.lowercase()}",
+                        text = "Movimientos bancarios · ${periodo.etiqueta.lowercase()}",
                         style = MaterialTheme.typography.titleMedium
                     )
                     Row(
@@ -208,7 +272,7 @@ fun DashboardScreen(
                         )
                     }
                     Text(
-                        text = "Balance Nequi del periodo: ${balanceDigitalPeriodo.comoPesos()}",
+                        text = "Balance digital del periodo: ${balanceDigitalPeriodo.comoPesos()}",
                         style = MaterialTheme.typography.labelSmall,
                         color = GrisTexto,
                         modifier = Modifier.padding(top = 4.dp)
@@ -226,7 +290,7 @@ fun DashboardScreen(
         }
 
         if (gastosPorCategoria.isEmpty()) {
-            item { Text("Sin gastos en este periodo.", color = GrisTexto) }
+            item { Text("Sin gastos en este filtro.", color = GrisTexto) }
         } else {
             items(gastosPorCategoria) { (categoria, monto) ->
                 BarraCategoria(
@@ -248,7 +312,7 @@ fun DashboardScreen(
         }
 
         if (ingresosPorCategoria.isEmpty()) {
-            item { Text("Sin ingresos en este periodo.", color = GrisTexto) }
+            item { Text("Sin ingresos en este filtro.", color = GrisTexto) }
         } else {
             items(ingresosPorCategoria) { (categoria, monto) ->
                 BarraCategoria(

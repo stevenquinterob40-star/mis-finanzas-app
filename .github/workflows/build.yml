@@ -1,7 +1,7 @@
 name: Compilar APK
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, rediseno-y-presupuestos ]
   workflow_dispatch:
 jobs:
   build:

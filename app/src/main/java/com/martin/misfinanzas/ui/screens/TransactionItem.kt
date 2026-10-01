@@ -64,7 +64,7 @@ fun TransactionRow(transaction: Transaction, onClick: () -> Unit) {
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = if (esIngreso) Icons.Filled.ArrowDownward else Icons.Filled.ArrowUpward,
+                    imageVector = if (esIngreso) Icons.Filled.ArrowUpward else Icons.Filled.ArrowDownward,
                     contentDescription = if (esIngreso) "Ingreso" else "Gasto",
                     tint = colorTipo,
                     modifier = Modifier.size(20.dp)

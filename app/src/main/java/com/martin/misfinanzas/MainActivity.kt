@@ -218,6 +218,7 @@ class MainActivity : ComponentActivity() {
                         }
                     },
                     floatingActionButton = {
+                        if (pantalla == Pantalla.INICIO && comparacion == null) {
                         FloatingActionButton(
                             shape = RoundedCornerShape(18.dp),
                             containerColor = MaterialTheme.colorScheme.primary,
@@ -227,6 +228,7 @@ class MainActivity : ComponentActivity() {
                             dialogoAbierto = true
                         }) {
                             Icon(Icons.Filled.Add, contentDescription = "Agregar movimiento")
+                        }
                         }
                     }
                 ) { padding ->

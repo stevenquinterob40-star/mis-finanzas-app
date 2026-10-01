@@ -11,6 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -18,13 +19,17 @@ import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.PendingActions
+import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -54,9 +59,12 @@ import com.martin.misfinanzas.ui.screens.DashboardScreen
 import com.martin.misfinanzas.ui.screens.HistorialScreen
 import com.martin.misfinanzas.ui.screens.HomeScreen
 import com.martin.misfinanzas.ui.screens.PendientesScreen
+import com.martin.misfinanzas.ui.screens.PresupuestosScreen
+import com.martin.misfinanzas.ui.theme.GrisTexto
 import com.martin.misfinanzas.ui.theme.MisFinanzasTheme
+import com.martin.misfinanzas.ui.theme.VerdeOscuro
 
-private enum class Pantalla { INICIO, HISTORIAL, PENDIENTES, RESUMEN }
+private enum class Pantalla { INICIO, HISTORIAL, PENDIENTES, RESUMEN, PRESUPUESTOS }
 
 class MainActivity : ComponentActivity() {
 
@@ -146,22 +154,39 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                val coloresNav = NavigationBarItemDefaults.colors(
+                    selectedIconColor = VerdeOscuro,
+                    selectedTextColor = VerdeOscuro,
+                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                    unselectedIconColor = GrisTexto,
+                    unselectedTextColor = GrisTexto
+                )
+
                 Scaffold(
+                    containerColor = MaterialTheme.colorScheme.background,
                     bottomBar = {
-                        NavigationBar {
+                        Column {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        NavigationBar(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            tonalElevation = 0.dp
+                        ) {
                             NavigationBarItem(
+                                colors = coloresNav,
                                 selected = pantalla == Pantalla.INICIO,
                                 onClick = { pantalla = Pantalla.INICIO },
                                 icon = { Icon(Icons.Filled.Home, contentDescription = "Inicio") },
                                 label = { Text("Inicio") }
                             )
                             NavigationBarItem(
+                                colors = coloresNav,
                                 selected = pantalla == Pantalla.HISTORIAL,
                                 onClick = { pantalla = Pantalla.HISTORIAL },
                                 icon = { Icon(Icons.Filled.History, contentDescription = "Historial") },
                                 label = { Text("Historial") }
                             )
                             NavigationBarItem(
+                                colors = coloresNav,
                                 selected = pantalla == Pantalla.PENDIENTES,
                                 onClick = { pantalla = Pantalla.PENDIENTES },
                                 icon = {
@@ -176,19 +201,34 @@ class MainActivity : ComponentActivity() {
                                 label = { Text("Pendientes") }
                             )
                             NavigationBarItem(
+                                colors = coloresNav,
                                 selected = pantalla == Pantalla.RESUMEN,
                                 onClick = { pantalla = Pantalla.RESUMEN },
                                 icon = { Icon(Icons.Filled.Dashboard, contentDescription = "Resumen") },
                                 label = { Text("Resumen") }
                             )
+                            NavigationBarItem(
+                                colors = coloresNav,
+                                selected = pantalla == Pantalla.PRESUPUESTOS,
+                                onClick = { pantalla = Pantalla.PRESUPUESTOS },
+                                icon = { Icon(Icons.Filled.PieChart, contentDescription = "Presupuestos") },
+                                label = { Text("Límites") }
+                            )
+                        }
                         }
                     },
                     floatingActionButton = {
-                        FloatingActionButton(onClick = {
+                        if (pantalla == Pantalla.INICIO && comparacion == null) {
+                        FloatingActionButton(
+                            shape = RoundedCornerShape(18.dp),
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
+                            onClick = {
                             transaccionEnEdicion = null
                             dialogoAbierto = true
                         }) {
                             Icon(Icons.Filled.Add, contentDescription = "Agregar movimiento")
+                        }
                         }
                     }
                 ) { padding ->
@@ -235,9 +275,7 @@ class MainActivity : ComponentActivity() {
                                         )
                                     )
                                 },
-                                onLimpiarDuplicados = {
-                                    viewModel.limpiarDuplicadosExactos()
-                                },
+                                onEliminarDuplicados = { viewModel.eliminarVarias(it) },
                                 modifier = modifier
                             )
                             Pantalla.PENDIENTES -> PendientesScreen(
@@ -247,6 +285,10 @@ class MainActivity : ComponentActivity() {
                                     transaccionEnEdicion = it
                                     dialogoAbierto = true
                                 },
+                                modifier = modifier
+                            )
+                            Pantalla.PRESUPUESTOS -> PresupuestosScreen(
+                                transacciones = transacciones,
                                 modifier = modifier
                             )
                             Pantalla.RESUMEN -> DashboardScreen(

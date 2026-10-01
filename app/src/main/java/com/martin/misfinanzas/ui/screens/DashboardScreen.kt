@@ -43,7 +43,18 @@ import com.martin.misfinanzas.data.Origen
 import com.martin.misfinanzas.data.TipoMovimiento
 import com.martin.misfinanzas.data.Transaction
 import com.martin.misfinanzas.ui.colorParaCategoria
+import com.martin.misfinanzas.ui.BarraBancos
+import com.martin.misfinanzas.ui.BarraOrden
+import com.martin.misfinanzas.ui.ORDEN_CATEGORIAS
+import com.martin.misfinanzas.ui.ORDEN_MOVIMIENTOS
+import com.martin.misfinanzas.ui.Orden
+import com.martin.misfinanzas.ui.ordenarCategorias
+import com.martin.misfinanzas.ui.ordenarMovimientos
 import com.martin.misfinanzas.ui.comoPesos
+import com.martin.misfinanzas.ui.perteneceA
+import com.martin.misfinanzas.ui.components.TarjetaBalanceHero
+import com.martin.misfinanzas.ui.components.TarjetaSuave
+import com.martin.misfinanzas.ui.components.TituloPantalla
 import com.martin.misfinanzas.ui.theme.GrisTexto
 import com.martin.misfinanzas.ui.theme.RojoGasto
 import com.martin.misfinanzas.ui.theme.VerdeIngreso
@@ -80,6 +91,8 @@ fun DashboardScreen(
 ) {
     var periodo by remember { mutableStateOf(Periodo.MES) }
     var textoBusqueda by remember { mutableStateOf("") }
+    var filtroBanco by remember { mutableStateOf<String?>(null) }
+    var ordenCategorias by remember { mutableStateOf(Orden.MAYOR) }
     var filtroTipoResumen by remember { mutableStateOf<TipoMovimiento?>(null) }
     var filtroDetalle by remember { mutableStateOf<FiltroDetalle?>(null) }
 
@@ -87,6 +100,7 @@ fun DashboardScreen(
     
     val filtradas = transacciones
         .filter { it.fecha >= inicioMillis && !it.necesitaRevision }
+        .filter { it.perteneceA(filtroBanco) }
         .filter { t ->
             val busqueda = textoBusqueda.trim().lowercase()
             if (busqueda.isBlank()) true
@@ -129,20 +143,22 @@ fun DashboardScreen(
         .groupBy { it.categoria }
         .mapValues { (_, lista) -> lista.sumOf { it.monto } }
         .toList()
-        .sortedByDescending { it.second }
+        .ordenarCategorias(ordenCategorias)
 
     val ingresosPorCategoria = filtradas
         .filter { it.tipo == TipoMovimiento.INGRESO }
         .groupBy { it.categoria }
         .mapValues { (_, lista) -> lista.sumOf { it.monto } }
         .toList()
-        .sortedByDescending { it.second }
+        .ordenarCategorias(ordenCategorias)
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        item { TituloPantalla("Resumen") }
+
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Periodo.entries.forEach { p ->
@@ -153,6 +169,16 @@ fun DashboardScreen(
                     )
                 }
             }
+        }
+
+        item { BarraBancos(seleccionado = filtroBanco, onSeleccion = { filtroBanco = it }) }
+
+        item {
+            BarraOrden(
+                opciones = ORDEN_CATEGORIAS,
+                seleccionado = ordenCategorias,
+                onSeleccion = { ordenCategorias = it }
+            )
         }
 
         item {
@@ -222,23 +248,14 @@ fun DashboardScreen(
         }
 
         item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = VerdeMedio),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(18.dp)) {
-                    Text("Balance de ${periodo.etiqueta.lowercase()}", color = Color.White.copy(alpha = 0.85f))
-                    Text(
-                        text = balance.comoPesos(),
-                        color = Color.White,
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                }
-            }
+            TarjetaBalanceHero(
+                titulo = "Balance de ${periodo.etiqueta.lowercase()}",
+                monto = balance.comoPesos()
+            )
         }
 
         item {
-            Card(modifier = Modifier.fillMaxWidth()) {
+            TarjetaSuave(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = "Movimientos bancarios · ${periodo.etiqueta.lowercase()}",
@@ -338,7 +355,9 @@ private fun DetalleFiltradoScreen(
     val color = if (filtro.tipo == TipoMovimiento.INGRESO) VerdeIngreso else RojoGasto
     val nombreTipo = if (filtro.tipo == TipoMovimiento.INGRESO) "Ingresos" else "Gastos"
     val titulo = if (filtro.categoria != null) "$nombreTipo · ${filtro.categoria}" else nombreTipo
+    var orden by remember { mutableStateOf(Orden.RECIENTE) }
     val total = transacciones.sumOf { it.monto }
+    val ordenadas = transacciones.ordenarMovimientos(orden)
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -355,9 +374,9 @@ private fun DetalleFiltradoScreen(
         }
 
         item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.12f)),
-                modifier = Modifier.fillMaxWidth()
+            TarjetaSuave(
+                modifier = Modifier.fillMaxWidth(),
+                containerColor = color.copy(alpha = 0.12f)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Total", style = MaterialTheme.typography.labelSmall, color = GrisTexto)
@@ -376,10 +395,18 @@ private fun DetalleFiltradoScreen(
             }
         }
 
+        item {
+            BarraOrden(
+                opciones = ORDEN_MOVIMIENTOS,
+                seleccionado = orden,
+                onSeleccion = { orden = it }
+            )
+        }
+
         if (transacciones.isEmpty()) {
             item { Text("No hay movimientos en este filtro.", color = GrisTexto) }
         } else {
-            items(transacciones) { transaccion ->
+            items(ordenadas) { transaccion ->
                 TransactionRow(transaction = transaccion, onClick = { onClickTransaction(transaccion) })
             }
         }
@@ -394,10 +421,9 @@ private fun ResumenMiniCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        onClick = onClick,
+    TarjetaSuave(
         modifier = modifier,
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        onClick = onClick
     ) {
         Row(
             modifier = Modifier
@@ -434,10 +460,9 @@ private fun BarraCategoria(
     onClick: () -> Unit
 ) {
     val fraccion = if (totalDelTipo > 0) (monto / totalDelTipo).toFloat().coerceIn(0f, 1f) else 0f
-    Card(
-        onClick = onClick,
+    TarjetaSuave(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        onClick = onClick
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
             Row(

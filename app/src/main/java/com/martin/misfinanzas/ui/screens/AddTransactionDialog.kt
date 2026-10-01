@@ -34,7 +34,7 @@ import com.martin.misfinanzas.data.Origen
 import com.martin.misfinanzas.data.TipoMovimiento
 import com.martin.misfinanzas.data.Transaction
 import com.martin.misfinanzas.data.UsoCategorias
-import com.martin.misfinanzas.ui.MontoVisualTransformation
+import com.martin.misfinanzas.ui.comoPesos
 import com.martin.misfinanzas.ui.aMontoDouble
 import com.martin.misfinanzas.ui.aTextoEntrada
 import com.martin.misfinanzas.ui.colorParaCategoria
@@ -110,7 +110,10 @@ fun AddTransactionDialog(
                     },
                     label = { Text("Monto") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    visualTransformation = MontoVisualTransformation(),
+                    supportingText = {
+                        val valor = monto.aMontoDouble()
+                        if (valor != null && valor > 0) Text(valor.comoPesos())
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     prefix = { Text("$") }
                 )
@@ -164,8 +167,8 @@ fun AddTransactionDialog(
 
                 if (origen == Origen.DIGITAL) {
                     Text("Banco", style = androidx.compose.material3.MaterialTheme.typography.labelSmall)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        BANCOS.forEach { banco ->
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(BANCOS) { banco ->
                             FilterChip(
                                 selected = entidad == banco,
                                 onClick = { entidad = banco },

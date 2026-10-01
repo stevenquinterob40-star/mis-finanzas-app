@@ -43,7 +43,9 @@ import com.martin.misfinanzas.data.Origen
 import com.martin.misfinanzas.data.TipoMovimiento
 import com.martin.misfinanzas.data.Transaction
 import com.martin.misfinanzas.ui.colorParaCategoria
+import com.martin.misfinanzas.ui.BarraBancos
 import com.martin.misfinanzas.ui.comoPesos
+import com.martin.misfinanzas.ui.perteneceA
 import com.martin.misfinanzas.ui.components.TarjetaBalanceHero
 import com.martin.misfinanzas.ui.components.TarjetaSuave
 import com.martin.misfinanzas.ui.components.TituloPantalla
@@ -83,6 +85,7 @@ fun DashboardScreen(
 ) {
     var periodo by remember { mutableStateOf(Periodo.MES) }
     var textoBusqueda by remember { mutableStateOf("") }
+    var filtroBanco by remember { mutableStateOf<String?>(null) }
     var filtroTipoResumen by remember { mutableStateOf<TipoMovimiento?>(null) }
     var filtroDetalle by remember { mutableStateOf<FiltroDetalle?>(null) }
 
@@ -90,6 +93,7 @@ fun DashboardScreen(
     
     val filtradas = transacciones
         .filter { it.fecha >= inicioMillis && !it.necesitaRevision }
+        .filter { it.perteneceA(filtroBanco) }
         .filter { t ->
             val busqueda = textoBusqueda.trim().lowercase()
             if (busqueda.isBlank()) true
@@ -159,6 +163,8 @@ fun DashboardScreen(
                 }
             }
         }
+
+        item { BarraBancos(seleccionado = filtroBanco, onSeleccion = { filtroBanco = it }) }
 
         item {
             OutlinedTextField(

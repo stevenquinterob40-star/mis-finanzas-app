@@ -46,7 +46,9 @@ import com.martin.misfinanzas.data.Origen
 import com.martin.misfinanzas.data.TipoMovimiento
 import com.martin.misfinanzas.data.Transaction
 import com.martin.misfinanzas.ui.GrupoDuplicados
+import com.martin.misfinanzas.ui.BarraBancos
 import com.martin.misfinanzas.ui.comoPesos
+import com.martin.misfinanzas.ui.perteneceA
 import com.martin.misfinanzas.ui.components.TituloPantalla
 import com.martin.misfinanzas.ui.encontrarDuplicados
 import com.martin.misfinanzas.ui.theme.GrisTexto
@@ -73,6 +75,7 @@ fun HistorialScreen(
     var textoBusqueda by remember { mutableStateOf("") }
     var filtroOrigen by remember { mutableStateOf(FiltroOrigen.TODOS) }
     var filtroTipo by remember { mutableStateOf<TipoMovimiento?>(null) }
+    var filtroBanco by remember { mutableStateOf<String?>(null) }
     var categoriaSeleccionada by remember { mutableStateOf<String?>(null) }
     var fechaDesde by remember { mutableStateOf<Long?>(null) }
     var fechaHasta by remember { mutableStateOf<Long?>(null) }
@@ -104,6 +107,7 @@ fun HistorialScreen(
                 FiltroOrigen.EFECTIVO -> t.origen == Origen.EFECTIVO
             }
         }
+        .filter { t -> t.perteneceA(filtroBanco) }
         .filter { t -> filtroTipo == null || t.tipo == filtroTipo }
         .filter { t -> categoriaSeleccionada == null || t.categoria == categoriaSeleccionada }
         .filter { t -> fechaDesde == null || t.fecha >= fechaDesde!! }
@@ -213,6 +217,8 @@ fun HistorialScreen(
                 )
             }
         }
+
+        item { BarraBancos(seleccionado = filtroBanco, onSeleccion = { filtroBanco = it }) }
 
         item {
             Row(

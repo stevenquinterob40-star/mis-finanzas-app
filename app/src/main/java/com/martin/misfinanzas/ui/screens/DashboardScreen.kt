@@ -44,6 +44,12 @@ import com.martin.misfinanzas.data.TipoMovimiento
 import com.martin.misfinanzas.data.Transaction
 import com.martin.misfinanzas.ui.colorParaCategoria
 import com.martin.misfinanzas.ui.BarraBancos
+import com.martin.misfinanzas.ui.BarraOrden
+import com.martin.misfinanzas.ui.ORDEN_CATEGORIAS
+import com.martin.misfinanzas.ui.ORDEN_MOVIMIENTOS
+import com.martin.misfinanzas.ui.Orden
+import com.martin.misfinanzas.ui.ordenarCategorias
+import com.martin.misfinanzas.ui.ordenarMovimientos
 import com.martin.misfinanzas.ui.comoPesos
 import com.martin.misfinanzas.ui.perteneceA
 import com.martin.misfinanzas.ui.components.TarjetaBalanceHero
@@ -86,6 +92,7 @@ fun DashboardScreen(
     var periodo by remember { mutableStateOf(Periodo.MES) }
     var textoBusqueda by remember { mutableStateOf("") }
     var filtroBanco by remember { mutableStateOf<String?>(null) }
+    var ordenCategorias by remember { mutableStateOf(Orden.MAYOR) }
     var filtroTipoResumen by remember { mutableStateOf<TipoMovimiento?>(null) }
     var filtroDetalle by remember { mutableStateOf<FiltroDetalle?>(null) }
 
@@ -136,14 +143,14 @@ fun DashboardScreen(
         .groupBy { it.categoria }
         .mapValues { (_, lista) -> lista.sumOf { it.monto } }
         .toList()
-        .sortedByDescending { it.second }
+        .ordenarCategorias(ordenCategorias)
 
     val ingresosPorCategoria = filtradas
         .filter { it.tipo == TipoMovimiento.INGRESO }
         .groupBy { it.categoria }
         .mapValues { (_, lista) -> lista.sumOf { it.monto } }
         .toList()
-        .sortedByDescending { it.second }
+        .ordenarCategorias(ordenCategorias)
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -165,6 +172,14 @@ fun DashboardScreen(
         }
 
         item { BarraBancos(seleccionado = filtroBanco, onSeleccion = { filtroBanco = it }) }
+
+        item {
+            BarraOrden(
+                opciones = ORDEN_CATEGORIAS,
+                seleccionado = ordenCategorias,
+                onSeleccion = { ordenCategorias = it }
+            )
+        }
 
         item {
             OutlinedTextField(
@@ -340,7 +355,9 @@ private fun DetalleFiltradoScreen(
     val color = if (filtro.tipo == TipoMovimiento.INGRESO) VerdeIngreso else RojoGasto
     val nombreTipo = if (filtro.tipo == TipoMovimiento.INGRESO) "Ingresos" else "Gastos"
     val titulo = if (filtro.categoria != null) "$nombreTipo · ${filtro.categoria}" else nombreTipo
+    var orden by remember { mutableStateOf(Orden.RECIENTE) }
     val total = transacciones.sumOf { it.monto }
+    val ordenadas = transacciones.ordenarMovimientos(orden)
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -378,10 +395,18 @@ private fun DetalleFiltradoScreen(
             }
         }
 
+        item {
+            BarraOrden(
+                opciones = ORDEN_MOVIMIENTOS,
+                seleccionado = orden,
+                onSeleccion = { orden = it }
+            )
+        }
+
         if (transacciones.isEmpty()) {
             item { Text("No hay movimientos en este filtro.", color = GrisTexto) }
         } else {
-            items(transacciones) { transaccion ->
+            items(ordenadas) { transaccion ->
                 TransactionRow(transaction = transaccion, onClick = { onClickTransaction(transaccion) })
             }
         }

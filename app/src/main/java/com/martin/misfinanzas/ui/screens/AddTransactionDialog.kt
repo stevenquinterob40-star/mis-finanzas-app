@@ -26,7 +26,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.martin.misfinanzas.data.Categorias
 import com.martin.misfinanzas.data.CategoriasPersonalizadas
@@ -43,6 +45,13 @@ import com.martin.misfinanzas.ui.theme.VerdeIngreso
 
 private val BANCOS = listOf("Nequi", "Bancolombia", "Nu")
 
+private fun conPuntosDeMiles(crudo: String): String {
+    val indexComa = crudo.indexOf(',')
+    val entera = if (indexComa == -1) crudo else crudo.substring(0, indexComa)
+    val resto = if (indexComa == -1) "" else crudo.substring(indexComa)
+    return entera.reversed().chunked(3).joinToString(".").reversed() + resto
+}
+
 @Composable
 fun AddTransactionDialog(
     transaccionExistente: Transaction? = null,
@@ -57,6 +66,7 @@ fun AddTransactionDialog(
             else ""
         )
     }
+    var montoCampo by remember { mutableStateOf(TextFieldValue(conPuntosDeMiles(monto))) }
     var descripcion by remember { mutableStateOf(transaccionExistente?.descripcion ?: "") }
     var tipo by remember { mutableStateOf(transaccionExistente?.tipo ?: TipoMovimiento.GASTO) }
     var origen by remember { mutableStateOf(transaccionExistente?.origen ?: Origen.EFECTIVO) }
@@ -93,29 +103,27 @@ fun AddTransactionDialog(
                 }
 
                 OutlinedTextField(
-                    value = monto,
+                    value = montoCampo,
                     onValueChange = { nuevo ->
-                        val normalizado = nuevo.replace(".", ",")
-                        val soloValido = normalizado.filter { it.isDigit() || it == ',' }
-                        val indexComa = soloValido.indexOf(',')
+                        // Los puntos son solo visuales: se quitan y se vuelven a poner.
+                        val sinPuntos = nuevo.text.filter { it.isDigit() || it == ',' }
+                        val indexComa = sinPuntos.indexOf(',')
                         monto = if (indexComa == -1) {
-                            soloValido
+                            sinPuntos
                         } else {
-                            val entera = soloValido.substring(0, indexComa)
-                            val decimal = soloValido.substring(indexComa + 1)
+                            val entera = sinPuntos.substring(0, indexComa)
+                            val decimal = sinPuntos.substring(indexComa + 1)
                                 .filter { it.isDigit() }
                                 .take(2)
                             "$entera,$decimal"
                         }
+                        val formateado = conPuntosDeMiles(monto)
+                        montoCampo = TextFieldValue(formateado, TextRange(formateado.length))
                     },
                     label = { Text("Monto") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    supportingText = {
-                        val valor = monto.aMontoDouble()
-                        if (valor != null && valor > 0) Text(valor.comoPesos())
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    prefix = { Text("$") }
+                    prefix = { Text("$") },
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 OutlinedTextField(

@@ -12,23 +12,24 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.martin.misfinanzas.data.MovimientoExtracto
 import com.martin.misfinanzas.data.Transaction
 import com.martin.misfinanzas.ui.ComparacionExtracto
 import com.martin.misfinanzas.ui.comoPesos
-import com.martin.misfinanzas.ui.theme.GrisTexto
+import com.martin.misfinanzas.ui.components.TarjetaSuave
+import com.martin.misfinanzas.ui.components.TituloSeccion
 import com.martin.misfinanzas.ui.theme.RojoGasto
 import com.martin.misfinanzas.ui.theme.VerdeIngreso
 import java.text.SimpleDateFormat
@@ -47,7 +48,7 @@ fun ComparacionExtractoScreen(
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
+        contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         item {
@@ -55,26 +56,36 @@ fun ComparacionExtractoScreen(
                 IconButton(onClick = onCerrar) {
                     Icon(Icons.Filled.ArrowBack, contentDescription = "Cerrar comparación")
                 }
-                Text("Comparación con el extracto", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Comparación con el extracto",
+                    style = MaterialTheme.typography.titleMedium
+                )
             }
         }
 
         item {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
+            TarjetaSuave(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     if (comparacion.limpiadosAutomaticamente > 0) {
-                        Text(
-                            "🧹 ${comparacion.limpiadosAutomaticamente} duplicado(s) se limpiaron solos",
-                            color = VerdeIngreso,
-                            modifier = Modifier.padding(bottom = 4.dp)
+                        FilaResumen(
+                            "🧹",
+                            "${comparacion.limpiadosAutomaticamente} duplicado(s) se limpiaron solos",
+                            VerdeIngreso
                         )
                     }
-                    Text("✅ ${comparacion.coinciden} ya estaban registrados", color = VerdeIngreso)
-                    Text("➕ ${comparacion.faltan.size} faltan en la app", modifier = Modifier.padding(top = 4.dp))
-                    Text(
-                        "⚠️ ${comparacion.sobran.size} están en la app pero NO aparecen en el extracto",
-                        color = RojoGasto,
-                        modifier = Modifier.padding(top = 4.dp)
+                    FilaResumen("✅", "${comparacion.coinciden} ya estaban registrados", VerdeIngreso)
+                    FilaResumen(
+                        "➕",
+                        "${comparacion.faltan.size} faltan en la app",
+                        MaterialTheme.colorScheme.onSurface
+                    )
+                    FilaResumen(
+                        "⚠️",
+                        "${comparacion.sobran.size} están en la app pero NO aparecen en el extracto",
+                        RojoGasto
                     )
                 }
             }
@@ -82,28 +93,25 @@ fun ComparacionExtractoScreen(
 
         if (comparacion.faltan.isNotEmpty()) {
             item {
-                OutlinedButton(onClick = onAgregarFaltantes, modifier = Modifier.fillMaxWidth()) {
+                Button(
+                    onClick = onAgregarFaltantes,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Text("Agregar los ${comparacion.faltan.size} que faltan")
                 }
             }
-            item {
-                Text(
-                    "Faltan",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-            }
+            item { TituloSeccion("Faltan") }
             items(comparacion.faltan) { mov -> FilaMovimientoExtracto(mov) }
         }
 
         if (comparacion.sobran.isNotEmpty()) {
             item {
-                Column(modifier = Modifier.padding(top = 8.dp)) {
-                    Text("Sobran en la app", style = MaterialTheme.typography.titleMedium)
+                Column {
+                    TituloSeccion("Sobran en la app")
                     Text(
                         "Estos no aparecen en el extracto real — probablemente sea la causa de que el saldo no cuadre. Revísalos y bórralos si no corresponden.",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = GrisTexto,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 2.dp)
                     )
                 }
@@ -114,14 +122,33 @@ fun ComparacionExtractoScreen(
 }
 
 @Composable
+private fun FilaResumen(icono: String, texto: String, color: Color) {
+    Row(verticalAlignment = Alignment.Top) {
+        Text(icono)
+        Text(
+            text = "  $texto",
+            color = color,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+@Composable
 private fun FilaMovimientoExtracto(mov: MovimientoExtracto) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(mov.descripcion, fontWeight = FontWeight.Medium, maxLines = 1)
+    TarjetaSuave(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Text(
+                mov.descripcion,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
             Text(
                 "${mov.tipo} · ${mov.monto.comoPesos()} · ${formatoFecha.format(Date(mov.fecha))}",
                 style = MaterialTheme.typography.labelSmall,
-                color = GrisTexto
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp)
             )
         }
     }
@@ -129,27 +156,37 @@ private fun FilaMovimientoExtracto(mov: MovimientoExtracto) {
 
 @Composable
 private fun FilaSobrante(t: Transaction, onEliminar: () -> Unit) {
-    Card(
+    TarjetaSuave(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = RojoGasto.copy(alpha = 0.06f))
+        containerColor = RojoGasto.copy(alpha = 0.06f)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(start = 14.dp, top = 6.dp, end = 6.dp, bottom = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Text(t.descripcion, fontWeight = FontWeight.Medium, maxLines = 1)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    t.descripcion,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
                 Text(
                     "${t.tipo} · ${t.monto.comoPesos()} · ${formatoFecha.format(Date(t.fecha))}",
                     style = MaterialTheme.typography.labelSmall,
-                    color = GrisTexto
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp)
                 )
             }
             IconButton(onClick = onEliminar) {
-                Icon(Icons.Filled.Delete, contentDescription = "Eliminar este movimiento", tint = RojoGasto)
+                Icon(
+                    Icons.Filled.Delete,
+                    contentDescription = "Eliminar este movimiento",
+                    tint = RojoGasto
+                )
             }
         }
     }

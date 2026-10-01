@@ -44,6 +44,9 @@ import com.martin.misfinanzas.data.TipoMovimiento
 import com.martin.misfinanzas.data.Transaction
 import com.martin.misfinanzas.ui.colorParaCategoria
 import com.martin.misfinanzas.ui.comoPesos
+import com.martin.misfinanzas.ui.components.TarjetaBalanceHero
+import com.martin.misfinanzas.ui.components.TarjetaSuave
+import com.martin.misfinanzas.ui.components.TituloPantalla
 import com.martin.misfinanzas.ui.theme.GrisTexto
 import com.martin.misfinanzas.ui.theme.RojoGasto
 import com.martin.misfinanzas.ui.theme.VerdeIngreso
@@ -143,6 +146,8 @@ fun DashboardScreen(
         contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        item { TituloPantalla("Resumen") }
+
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Periodo.entries.forEach { p ->
@@ -222,23 +227,14 @@ fun DashboardScreen(
         }
 
         item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = VerdeMedio),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(18.dp)) {
-                    Text("Balance de ${periodo.etiqueta.lowercase()}", color = Color.White.copy(alpha = 0.85f))
-                    Text(
-                        text = balance.comoPesos(),
-                        color = Color.White,
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                }
-            }
+            TarjetaBalanceHero(
+                titulo = "Balance de ${periodo.etiqueta.lowercase()}",
+                monto = balance.comoPesos()
+            )
         }
 
         item {
-            Card(modifier = Modifier.fillMaxWidth()) {
+            TarjetaSuave(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
                         text = "Movimientos bancarios · ${periodo.etiqueta.lowercase()}",
@@ -355,9 +351,9 @@ private fun DetalleFiltradoScreen(
         }
 
         item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.12f)),
-                modifier = Modifier.fillMaxWidth()
+            TarjetaSuave(
+                modifier = Modifier.fillMaxWidth(),
+                containerColor = color.copy(alpha = 0.12f)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Total", style = MaterialTheme.typography.labelSmall, color = GrisTexto)
@@ -394,10 +390,9 @@ private fun ResumenMiniCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        onClick = onClick,
+    TarjetaSuave(
         modifier = modifier,
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        onClick = onClick
     ) {
         Row(
             modifier = Modifier
@@ -434,10 +429,9 @@ private fun BarraCategoria(
     onClick: () -> Unit
 ) {
     val fraccion = if (totalDelTipo > 0) (monto / totalDelTipo).toFloat().coerceIn(0f, 1f) else 0f
-    Card(
-        onClick = onClick,
+    TarjetaSuave(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        onClick = onClick
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
             Row(
